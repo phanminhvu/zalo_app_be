@@ -317,13 +317,18 @@ exports.postZaloCustomer = async (req, res) => {
 		if (name && id && photo && phone && birthday) {
 			const user = await ZaloCustomer.findOne({ id })
 			if (user) {
-        if (user.name !== name || user.phone !== phone || user.photo !== photo || user.birthday !== birthday) {
-          user.name = name
-          user.phone = phone
-          user.photo = photo
-          user.birthday = birthday
-          user.save()
-        }
+				if (
+					user.name !== name ||
+					user.phone !== phone ||
+					user.photo !== photo ||
+					user.birthday !== birthday
+				) {
+					user.name = name
+					user.phone = phone
+					user.photo = photo
+					user.birthday = birthday
+					user.save()
+				}
 			} else {
 				const zaloUser = new ZaloCustomer({ id, name, phone, photo, birthday })
 				zaloUser.save()
@@ -331,12 +336,45 @@ exports.postZaloCustomer = async (req, res) => {
 		}
 
 		if (!phone) {
-			return res.status(404).json({ error: 'Không tìm thấy số điện thoại.' })
+			return res.status(400).json({ error: 'Không tìm thấy số điện thoại.' })
 		}
 
 		res.json({ id, name, photo, phone, birthday })
 	} catch (error) {
 		console.error('Lỗi khi gọi API của Zalo:', error)
 		res.status(500).json({ error: 'Không thể lấy thông tin từ Zalo.', details: error.message })
+	}
+}
+
+exports.getZaloReferralCode = async (req, res) => {
+	const id = req.query.userid
+	const user = await ZaloCustomer.findOne({ id })
+
+	if (user && user.phone) {
+		return res.status(200).json({
+			code: user.phone,
+		})
+	}
+	return res.status(400).json({ error: 'Không thể lấy mã giới thiệu' })
+}
+
+exports.postActiveZaloReferralCode = async (req, res) => {
+	const { code, id } = req.body
+	const user = await ZaloCustomer.findOne({ id })
+	try {
+		if (user) {
+			if (user.referral) {
+				return res.status(400).json({ message: 'Bạn đã kích hoạt với mã giới thiệu khác!' })
+			} else {
+				user.referral = code
+				user.save()
+				return res.status(200).json({ message: 'Kích hoạt mã giới thiệu thành công!' })
+			}
+		}
+		return res.status(400).json({ message: 'Đã có lỗi xảy ra, vui lòng thử lại sau!' })
+	} catch (error) {
+		return res
+			.status(400)
+			.json({ message: 'Đã có lỗi xảy ra, vui lòng thử lại sau!', detail: error?.message })
 	}
 }
