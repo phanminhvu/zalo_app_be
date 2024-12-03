@@ -11,6 +11,8 @@ const path = require('path');
 const notification = require('./services/notification')
 const Order = require('./models/order');
 const syncWebOrder = require('./utils/syncWebOrder')
+const ZaloProducts = require('./models/zaloproducts');
+const { products } = require('./utils/constant');
 
 dotenv.config();
 
@@ -57,6 +59,7 @@ const directorRoutes = require("./routes/director/director");
 const storeManagerRoutes = require("./routes/storeManager/storeManager");
 const customerRoute = require("./routes/customer/customer");
 const shippingServiceRoutes = require("./routes/shippingService");
+const zaloProductsRoutes = require("./routes/zaloProduct");
 
 app.use(authRoutes);
 app.use(userRoutes);
@@ -70,6 +73,7 @@ app.use(directorRoutes);
 app.use(storeManagerRoutes);
 app.use(customerRoute);
 app.use(shippingServiceRoutes);
+app.use(zaloProductsRoutes)
 
 const { postCreateOrder, postEndProduceOrder, postStartShipOrder, postEndShipOrder, deleteCreateOrder, updateOrder, deleteProduceOrder, deleteShipOrder, waitConfirmSellExport, waitConfirmDeleteOrder } = require("./controllers/order");
 const { postCreateTag } = require("./controllers/tag");
@@ -112,19 +116,38 @@ const cert = {
   ca: fs.readFileSync('./ssl/cabundle.crt')
 }
 
+const initializeZaloProducts = async () => {
+  const collectionExists = await mongoose.connection.db.listCollections({ name: 'zaloproducts' }).hasNext();
+  if (!collectionExists) {
+    await ZaloProducts.insertMany(products);
+    console.log('ZaloProducts collection created and products inserted.');
+  } else {
+    const productCount = await ZaloProducts.countDocuments();
+    if (productCount === 0) {
+      await ZaloProducts.insertMany(products);
+      console.log('ZaloProducts collection existed but was empty. Products inserted.');
+    } else {
+      console.log('ZaloProducts collection already exists and has data.');
+    }
+  }
+};
+
+
 mongoose
   .connect(MONGO_URI)
   .then(async () => {
-    const server = https.createServer(cert, app).listen(PORT, () => {
-      restartCreateTimerOrder();
-      console.log('Connect to mongodb');
-      syncWebOrderSchedule();
-    });
-
-    // const server = app.listen(PORT, async () => {
+    // await initializeZaloProducts();
+    // const server = https.createServer(cert, app).listen(PORT, () => {
     //   restartCreateTimerOrder();
     //   console.log('Connect to mongodb');
+    //   syncWebOrderSchedule();
     // });
+
+    const server = app.listen(PORT, async () => {
+      await initializeZaloProducts();
+      restartCreateTimerOrder();
+      console.log('Connect to mongodb');
+    });
 
     const io = require("./socket").init(server);
     io.on("connection", async (socket) => {
@@ -203,7 +226,7 @@ mongoose
 
   // if(isMainThread){
   //   const worker = new Worker(__filename);
-  
+
   //   worker.on('message', (msg) => {
   //     if(msg === 'start'){
   //       console.log('Worker started running sync Web Order.')
