@@ -23,6 +23,9 @@ const userSchema = new Schema({
   accessToken: {
 		type: String,
 	},
+	referral: {
+		type: String
+	}
 })
 
 module.exports = mongoose.model('ZaloCustomer', userSchema)
