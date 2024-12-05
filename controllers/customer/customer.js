@@ -274,10 +274,18 @@ exports.createOrder = async (req, res) => {
 
 exports.getOrderbyUserid = async (req, res) => {
 	const userid = req.query.userid
-	console.log(req.userid)
-	const orderListbyUser = await ZaloOrder.find({ customer_id: userid }).sort({ createdAt: -1 })
-	// console.log(orderListbyUser);
-	return res.status(200).json(orderListbyUser)
+	const status = req.query.status
+	console.log(req.query.userid, status)
+	if (status) {
+		const orderListbyUser = await ZaloOrder.find({ customer_id: userid, 'order.status': status }).sort({ createdAt: -1 })
+		// console.log(orderListbyUser);
+		return res.status(200).json(orderListbyUser)
+	}
+	else {
+		const orderListbyUser = await ZaloOrder.find({ customer_id: userid }).sort({ createdAt: -1 })
+		// console.log(orderListbyUser);
+		return res.status(200).json(orderListbyUser)
+	}
 }
 
 exports.postZaloCustomer = async (req, res) => {
