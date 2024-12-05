@@ -14,7 +14,8 @@ exports.addProduct = async (req, res) => {
 // Edit a product
 exports.editProduct = async (req, res) => {
   try {
-    const updatedProduct = await ZaloProducts.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    // const updatedProduct = await ZaloProducts.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updatedProduct = await ZaloProducts.findOneAndUpdate({id: req.params.id}, req.body, {new: true})
     if (!updatedProduct) {
       return res.status(404).json({ message: 'Product not found' });
     }
@@ -27,7 +28,7 @@ exports.editProduct = async (req, res) => {
 // Delete a product
 exports.deleteProduct = async (req, res) => {
   try {
-    const deletedProduct = await ZaloProducts.findByIdAndDelete(req.params.id);
+    const deletedProduct = await ZaloProducts.findOneAndRemove({id: req.params.id});
     if (!deletedProduct) {
       return res.status(404).json({ message: 'Product not found' });
     }
@@ -51,7 +52,7 @@ exports.addManyProducts = async (req, res) => {
 exports.deleteManyProducts = async (req, res) => {
   try {
     const { ids } = req.body;
-    const result = await ZaloProducts.deleteMany({ _id: { $in: ids } });
+    const result = await ZaloProducts.deleteMany({ id: { $in: ids } });
     res.status(200).json({ message: `${result.deletedCount} products deleted successfully` });
   } catch (err) {
     res.status(500).json({ message: 'Error deleting products', error: err });
@@ -60,7 +61,7 @@ exports.deleteManyProducts = async (req, res) => {
 
 exports.changeProductStatus = async (req, res) => {
   try {
-    const product = await ZaloProducts.findById(req.params.id);
+    const product = await ZaloProducts.findOne({id: req.params.id});
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
