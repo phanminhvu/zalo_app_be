@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const Schema = mongoose.Schema
 
 const userSchema = new Schema({
-  id: {
+  idOrder: {
 		type: String,
 		required: true,
 	},
@@ -11,24 +11,18 @@ const userSchema = new Schema({
 		type: String,
 		required: true,
 	},
-  phone: {
-    type: String
+  time: {
+		type: String,
+		required: true,
+	},
+  customerId: {
+		type: String,
+		required: true,
+	},
+  value: {
+    type: Number,
+    required: true,
   },
-	photo: {
-		type: String,
-	},
-	birthday: {
-		type: String,
-	},
-  accessToken: {
-		type: String,
-	},
-	referral: {
-		type: String
-	},
-	point: {
-		type: Number
-	}
 })
 
-module.exports = mongoose.model('ZaloCustomer', userSchema)
+module.exports = mongoose.model('ZaloHistoryPoint', userSchema)

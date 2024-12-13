@@ -13,6 +13,7 @@ const Order = require('./models/order');
 const syncWebOrder = require('./utils/syncWebOrder')
 const ZaloProducts = require('./models/zaloproducts');
 const { products } = require('./utils/constant');
+const ZaloConfig = require('./models/zaloconfig')
 
 dotenv.config();
 
@@ -60,6 +61,7 @@ const storeManagerRoutes = require("./routes/storeManager/storeManager");
 const customerRoute = require("./routes/customer/customer");
 const shippingServiceRoutes = require("./routes/shippingService");
 const zaloProductsRoutes = require("./routes/zaloProduct");
+const zaloHistoriesPointRoutes = require("./routes/zaloCustomerPoint");
 
 app.use(authRoutes);
 app.use(userRoutes);
@@ -74,6 +76,7 @@ app.use(storeManagerRoutes);
 app.use(customerRoute);
 app.use(shippingServiceRoutes);
 app.use(zaloProductsRoutes)
+app.use(zaloHistoriesPointRoutes)
 
 const { postCreateOrder, postEndProduceOrder, postStartShipOrder, postEndShipOrder, deleteCreateOrder, updateOrder, deleteProduceOrder, deleteShipOrder, waitConfirmSellExport, waitConfirmDeleteOrder } = require("./controllers/order");
 const { postCreateTag } = require("./controllers/tag");
@@ -148,6 +151,12 @@ mongoose
       restartCreateTimerOrder();
       console.log('Connect to mongodb');
     });
+
+    // load config
+    const commission = await ZaloConfig.findOne({name: 'COMMISSION_RATE'})
+    if (commission) {
+      global.COMMISSION_RATE = isNaN(+commission.value) ? 0 : +commission.value
+    }
 
     const io = require("./socket").init(server);
     io.on("connection", async (socket) => {

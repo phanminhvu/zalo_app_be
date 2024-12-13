@@ -386,3 +386,15 @@ exports.postActiveZaloReferralCode = async (req, res) => {
 			.json({ message: 'Đã có lỗi xảy ra, vui lòng thử lại sau!', detail: error?.message })
 	}
 }
+
+exports.getZaloCustomerPoint = async (req, res) => {
+	const id = req.query.userid
+	const user = await ZaloCustomer.findOne({ id })
+
+	if (user) {
+		return res.status(200).json({
+			point: user?.point ?? 0,
+		})
+	}
+	return res.status(400).json({ error: 'Không thể lấy thông tin tích điểm' })
+}

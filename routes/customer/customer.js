@@ -10,6 +10,7 @@ const {
   postZaloCustomer,
 	getZaloReferralCode,
 	postActiveZaloReferralCode,
+	getZaloCustomerPoint,
 } = require('../../controllers/customer/customer')
 
 const router = require('express').Router()
@@ -25,5 +26,6 @@ router.get('/customer/listorder', getOrderbyUserid)
 router.post('/customer/zalocustomer', postZaloCustomer)
 router.get('/customer/zalo-referral-code', getZaloReferralCode)
 router.post('/customer/active-zalo-referral-code', postActiveZaloReferralCode)
+router.get('/customer/zalo-customer-point', getZaloCustomerPoint)
 
 module.exports = router
