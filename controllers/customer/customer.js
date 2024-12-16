@@ -288,6 +288,19 @@ exports.getOrderbyUserid = async (req, res) => {
 	}
 }
 
+exports.getOrderDetail = async (req, res) => {
+	const orderId = req.query.orderId
+	if (orderId) {
+		const order = await ZaloOrder.findOne({ orderId })
+		// console.log(orderListbyUser);
+		if (order) return res.status(200).json({order})
+		return res.status(400).json({message: 'Không tìm thấy đơn hàng'})
+	}
+	else {
+		return res.status(400).json({message: 'Không tìm thấy đơn hàng'})
+	}
+}
+
 exports.postZaloCustomer = async (req, res) => {
 	const { accessToken, token } = req.body // Nhận accessToken và token từ request
 
