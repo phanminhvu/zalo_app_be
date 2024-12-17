@@ -183,39 +183,41 @@ exports.createMacCheckout = async (req, res) => {
 
 const sendOrder = async (order) => {
 	const storeId = order.cua_hang[0].urlApi
-	const name = order.customer_name ? order.customer_name : 'No Name'
+	// const name = order.customer_name ? order.customer_name : 'No Name'
 
 	const id_order = order.id.split('_')[1]
 
-	let address = ''
-	if (order.branch_type == 0) {
-		address = order.shipping?.address
-	} else {
-		address = 'Lấy tại cửa hàng'
-	}
+	// let address = ''
+	// if (order.branch_type == 0) {
+	// 	address = order.shipping?.address
+	// } else {
+	// 	address = 'Lấy tại cửa hàng'
+	// }
 
 	const phone = order.shipping?.phone ? order.shipping.phone : order.customer_phone
 
-	let note = `${order.note}\n ${
-		order.branch_type == 1 ? 'Lấy tại cửa hàng' : 'Giao hàng tận nơi'
-	}\n `
+	// let note = `${order.note}\n ${
+	// 	order.branch_type == 1 ? 'Lấy tại cửa hàng' : 'Giao hàng tận nơi'
+	// }\n `
 
-	const payment = order.payment_method == 'COD' ? 'cash' : 'transfer'
-	const item = order.line_items
-	let productInfo = `CODE : ${id_order},`
-	let quantity = 0
-	console.log('item', item)
-	item.forEach((element) => {
-		productInfo = productInfo + ' ' + element.name + ' x' + element.quantity + ' Phần,\n '
-		note = `${note}, ${element.user_note}`
-		quantity = quantity + element.weight
-	})
-	const toNumberBill = Number(order.total_item)
-	const shippingDate = order.shippingDate
-	const textShipTime = shippingDate.date
-		? `${shippingDate?.hour} : ${shippingDate?.minute} ${shippingDate.date}`
-		: 'Giao ngay'
-	productInfo = `${productInfo}${textShipTime},\n Cửa hàng: ${order.cua_hang[0].name},\n Phí giao hàng : ${order.shipping_total}đ `
+	// const payment = order.payment_method == 'COD' ? 'cash' : 'transfer'
+	// const item = order.line_items
+	// let productInfo = `CODE : ${id_order},`
+	// let quantity = 0
+	// console.log('item', item)
+	// item.forEach((element) => {
+	// 	productInfo = productInfo + ' ' + element.name + ' x' + element.quantity + ' Phần,\n '
+	// 	note = `${note}, ${element.user_note}`
+	// 	quantity = quantity + element.weight
+	// })
+	// const toNumberBill = Number(order.total_item)
+	// const shippingDate = order.shippingDate
+	// const textShipTime = shippingDate.date
+	// 	? `${shippingDate?.hour} : ${shippingDate?.minute} ${shippingDate.date}`
+	// 	: 'Giao ngay'
+	// productInfo = `${productInfo}${textShipTime},\n Cửa hàng: ${order.cua_hang[0].name},\n Phí giao hàng : ${order.shipping_total}đ `
+
+
 	try {
 		const findPhone = await Customer.findOne({ phone })
 		if (!findPhone) {
@@ -230,18 +232,14 @@ const sendOrder = async (order) => {
 		const store = await Store.findById(storeId)
 		const createdAt =
 			transformLocalDateString(new Date()) + ' - ' + transformLocalTimeString(new Date())
+
 		const guestOrder = new GuestOrder({
 			createdAt,
-			store,
-			app: false,
-			name,
-			productInfo,
-			address,
-			phone: String(phone),
-			quantity,
-			note,
-			payment,
-			bill: toNumberBill,
+			store: store._id,
+			id_order,
+			source: 'Zalo',
+			...order,
+
 		})
 		await guestOrder.save()
 
