@@ -1,29 +1,46 @@
 const ZaloProducts = require('../models/zaloproducts');
+const { domain } = require('../utils/constant')
 
 // Add a single product
 exports.addProduct = async (req, res) => {
-  try {
-    const newProduct = new ZaloProducts(req.body);
-    await newProduct.save();
-    res.status(201).json(newProduct);
-  } catch (err) {
-    res.status(500).json({ message: 'Error adding product', error: err });
-  }
-};
+	let image = ''
+	if (req.file) {
+		image = domain + req.file.path.replace('\\', '/')
+	} else {
+		res.status(400, { message: 'Ảnh sản phẩm chưa đúng định dạng' })
+	}
+	const body = { ...req.body, image }
+	try {
+		const newProduct = new ZaloProducts(body)
+		await newProduct.save()
+		res.status(201).json(newProduct)
+	} catch (err) {
+		res.status(500).json({ message: 'Error adding product', error: err })
+	}
+}
 
 // Edit a product
 exports.editProduct = async (req, res) => {
-  try {
-    // const updatedProduct = await ZaloProducts.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    const updatedProduct = await ZaloProducts.findOneAndUpdate({id: req.params.id}, req.body, {new: true})
-    if (!updatedProduct) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    res.status(200).json(updatedProduct);
-  } catch (err) {
-    res.status(500).json({ message: 'Error editing product', error: err });
-  }
-};
+	let image = ''
+	if (req.file) {
+		image = domain + req.file.path.replace('\\', '/')
+	} else {
+		res.status(400, { message: 'Ảnh sản phẩm chưa đúng định dạng' })
+	}
+	const body = { ...req.body, image }
+	try {
+		// const updatedProduct = await ZaloProducts.findByIdAndUpdate(req.params.id, req.body, { new: true });
+		const updatedProduct = await ZaloProducts.findOneAndUpdate({ id: req.params.id }, body, {
+			new: true,
+		})
+		if (!updatedProduct) {
+			return res.status(404).json({ message: 'Product not found' })
+		}
+		res.status(200).json(updatedProduct)
+	} catch (err) {
+		res.status(500).json({ message: 'Error editing product', error: err })
+	}
+}
 
 // Delete a product
 exports.deleteProduct = async (req, res) => {
