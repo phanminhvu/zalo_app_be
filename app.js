@@ -62,6 +62,7 @@ const customerRoute = require("./routes/customer/customer");
 const shippingServiceRoutes = require("./routes/shippingService");
 const zaloProductsRoutes = require("./routes/zaloProduct");
 const zaloHistoriesPointRoutes = require("./routes/zaloCustomerPoint");
+const guestOrderRoutes = require("./routes/guestOrder");
 
 app.use(authRoutes);
 app.use(userRoutes);
@@ -77,7 +78,7 @@ app.use(customerRoute);
 app.use(shippingServiceRoutes);
 app.use(zaloProductsRoutes)
 app.use(zaloHistoriesPointRoutes)
-
+app.use(guestOrderRoutes);
 const { postCreateOrder, postEndProduceOrder, postStartShipOrder, postEndShipOrder, deleteCreateOrder, updateOrder, deleteProduceOrder, deleteShipOrder, waitConfirmSellExport, waitConfirmDeleteOrder } = require("./controllers/order");
 const { postCreateTag } = require("./controllers/tag");
 const { verifyUpdateTagSocket, verifyStartProduceOrder, verifyEndProduceOrder, verifyStartShipOrder, verifyEndShipOrder, verifyEndOtherProduceOrder, verifyEndOtherShipOrder, verifyDeleteCreateOrder, verifyConfirmDeleteOrder } = require("./middleware/isSocket");
@@ -149,6 +150,7 @@ mongoose
     const server = app.listen(PORT, async () => {
       await initializeZaloProducts();
       restartCreateTimerOrder();
+      syncWebOrderSchedule();
       console.log('Connect to mongodb');
     });
 
