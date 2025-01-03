@@ -68,7 +68,7 @@ exports.send = async (storeId, userId,  title, content, status, channel = "ban-l
         tokenDevice: 1 
     });
 
-    const tokenDevices = usersWithStoreOne.map(user => user.tokenDevice);
+    const tokenDevices = usersWithStoreOne.map(user => user.tokenDevice).filter(token => !!token);
 
     const messages = tokenDevices.map(tokenDevice => {
         return {
@@ -100,11 +100,12 @@ exports.send = async (storeId, userId,  title, content, status, channel = "ban-l
         };
     });
 
-    const sendPromises = messages.map(message => {
-        return admin.messaging().send(message);
-    });
+    try {
+        const sendPromises = messages.map(message => {
+            return admin.messaging().send(message);
+        });
 
-    Promise.all(sendPromises)
+        Promise.all(sendPromises)
         .then((responses) => {
             responses.forEach((response, index) => {
                 console.log(`Gửi thông báo cho thiết bị ${tokenDevices[index]} thành công:`, response);
@@ -113,4 +114,8 @@ exports.send = async (storeId, userId,  title, content, status, channel = "ban-l
         .catch((error) => {
             console.log('Gửi thông báo thất bại:', error);
         });
+    }
+    catch (err) {
+        console.log('Gửi thông báo thất bại:', err);
+    }
 };

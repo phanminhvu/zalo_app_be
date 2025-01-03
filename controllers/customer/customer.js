@@ -140,6 +140,17 @@ exports.postGetphoneNumber = async (req, res) => {
 	const secretKey = 'LzdSCNlgSw6D47WUC1Mm' // Khóa bí mật của ứng dụng Zalo
 
 	try {
+		const resInfo = await axios.get(
+			'https://graph.zalo.me/v2.0/me?fields=id,name,picture.type(large),birthday',
+			{
+				headers: {
+					access_token: accessToken,
+				},
+			},
+		)
+		const userInfo = resInfo.data
+		const id = userInfo?.id
+
 		const response = await axios.get('https://graph.zalo.me/v2.0/me/info', {
 			params: {
 				access_token: accessToken, // Sử dụng access token từ client
@@ -147,11 +158,17 @@ exports.postGetphoneNumber = async (req, res) => {
 				secret_key: secretKey, // Khóa bí mật của ứng dụng
 			},
 		})
-		console.log(response)
 
 		const phoneNumber = response.data?.data?.number
 		if (!phoneNumber) {
 			return res.status(404).json({ error: 'Không tìm thấy số điện thoại.' })
+		}
+		if (id) {
+			const user = await ZaloCustomer.findOne({ id })
+			if (user) {
+				user.phone = phoneNumber
+				user.save()
+			}
 		}
 
 		res.json({ phoneNumber })
@@ -300,12 +317,9 @@ exports.getOrderDetail = async (req, res) => {
 }
 
 exports.postZaloCustomer = async (req, res) => {
-	const { accessToken, token } = req.body // Nhận accessToken và token từ request
+	const { accessToken } = req.body // Nhận accessToken và token từ request
 
 	console.log('Access Token received from client:', req.body.accessToken)
-	console.log('Token received from client:', token)
-
-	const secretKey = 'LzdSCNlgSw6D47WUC1Mm' // Khóa bí mật của ứng dụng Zalo
 
 	try {
 		const res1 = await axios.get(
@@ -317,48 +331,32 @@ exports.postZaloCustomer = async (req, res) => {
 			},
 		)
 
-		const response = await axios.get('https://graph.zalo.me/v2.0/me/info', {
-			params: {
-				access_token: accessToken, // Sử dụng access token từ client
-				code: token, // Sử dụng mã token từ client
-				secret_key: secretKey, // Khóa bí mật của ứng dụng
-			},
-		})
 		const userInfo = res1.data
-		console.log(response.data)
-
-		const phone = response.data?.data?.number
 		const name = userInfo?.name
 		const id = userInfo?.id
 		const photo = userInfo?.picture?.data?.url
 		const birthday = userInfo?.birthday
 
-		if (name && id && photo && phone && birthday) {
+		if (name && id && photo && birthday) {
 			const user = await ZaloCustomer.findOne({ id })
 			if (user) {
 				if (
 					user.name !== name ||
-					user.phone !== phone ||
 					user.photo !== photo ||
 					user.birthday !== birthday
 				) {
 					user.name = name
-					user.phone = phone
 					user.photo = photo
 					user.birthday = birthday
 					user.save()
 				}
 			} else {
-				const zaloUser = new ZaloCustomer({ id, name, phone, photo, birthday })
+				const zaloUser = new ZaloCustomer({ id, name, phone: '', photo, birthday })
 				zaloUser.save()
 			}
 		}
 
-		if (!phone) {
-			return res.status(400).json({ error: 'Không tìm thấy số điện thoại.' })
-		}
-
-		res.json({ id, name, photo, phone, birthday })
+		res.json({ id, name, photo, phone: '', birthday })
 	} catch (error) {
 		console.error('Lỗi khi gọi API của Zalo:', error)
 		res.status(500).json({ error: 'Không thể lấy thông tin từ Zalo.', details: error.message })
