@@ -6,26 +6,24 @@ exports.addProduct = async (req, res) => {
 	let image = ''
 	if (req.file) {
 		image = domain + req.file.path.replace('\\', '/')
-	} else {
-		res.status(400, { message: 'Ảnh sản phẩm chưa đúng định dạng' })
 	}
 	const body = { ...req.body, image }
 	try {
-		const newProduct = new ZaloProducts(body)
+    const length = (await ZaloProducts.find()).length
+		const newProduct = new ZaloProducts({ ...body, id: length + 1 })
 		await newProduct.save()
 		res.status(201).json(newProduct)
 	} catch (err) {
+    console.log('add product', err)
 		res.status(500).json({ message: 'Error adding product', error: err })
 	}
 }
 
 // Edit a product
 exports.editProduct = async (req, res) => {
-	let image = ''
+	let image = req.body?.image ?? ''
 	if (req.file) {
 		image = domain + req.file.path.replace('\\', '/')
-	} else {
-		res.status(400, { message: 'Ảnh sản phẩm chưa đúng định dạng' })
 	}
 	const body = { ...req.body, image }
 	try {
@@ -38,6 +36,7 @@ exports.editProduct = async (req, res) => {
 		}
 		res.status(200).json(updatedProduct)
 	} catch (err) {
+    console.log('edit product', err)
 		res.status(500).json({ message: 'Error editing product', error: err })
 	}
 }
