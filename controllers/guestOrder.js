@@ -1,4 +1,5 @@
 const GuestOrder = require('../models/guestOrder');
+const ZaloOrder = require('../models/zaloorder');
 
 // Add a new guest order
 exports.addGuestOrder = async (req, res) => {
@@ -16,9 +17,24 @@ exports.editGuestOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const guestOrder = await GuestOrder.findByIdAndUpdate(id, req.body, { new: true });
+
     if (!guestOrder) {
       return res.status(404).json({ message: 'Guest order not found' });
     }
+    const zaloOrder = await ZaloOrder.findOne({ "order.id": { $regex: guestOrder.code } });
+
+    if (!zaloOrder) {
+      return res.status(404).json({ message: "No matching Zalo order found" });
+    }
+
+    // Update the order status to "approved"
+    const updateResult = await ZaloOrder.updateOne(
+        { _id: zaloOrder.total },
+        { $set: {
+            "order.total": req.bill,
+            "order.note": req.note,
+          } }
+    );
     res.status(200).json(guestOrder);
   } catch (error) {
     res.status(500).json({ message: 'Error editing guest order', error });

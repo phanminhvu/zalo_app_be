@@ -7,6 +7,7 @@ const Order2023 = require("../../models/2023order");
 const TimerOrder = require("../../models/timerOrder");
 const GuestOrder = require('../../models/guestOrder');
 const DeletedOrder = require("../../models/deletedOrder");
+const  ZaloOrder  = require('../../models/zaloorder')
 const UpdatedOrder = require("../../models/updatedOrder");
 const TransferOrder = require("../../models/transferOrder");
 const ReImportFreshHistory = require("../../models/reImportFreshHistory");
@@ -41,12 +42,13 @@ exports.getGuestOrders = async (req, res) => {
   const store = req.user.store;
   try {
     const findStore = await Store.findById(store._id);
-    const guestOrders = await GuestOrder.find({ store, status: undefined });
+    const guestOrders = await GuestOrder.find({store, status: undefined})
     findStore.guestOrders = guestOrders.length;
     await findStore.save();
     io.getIO().emit(`get-guest-orders-quantity-${store._id}`, guestOrders.length);
     const allGuestOrders = await GuestOrder.find().count();
     io.getIO().emit("get-all-guest-orders-quantity", allGuestOrders);
+    console.log(guestOrders)
     return res.json(guestOrders);
   } catch (err) {
     console.log(err);
@@ -55,23 +57,101 @@ exports.getGuestOrders = async (req, res) => {
 
 exports.approveGuestOrders = async (req, res) => {
   const { id } = req.body;
-  try {
-    await GuestOrder.updateOne({ _id: id }, { $set: { status: 'approved' } });
-    return res.end();
-  } catch (err) {
-    console.log(err);
+
+  if (!id) {
+    return res.status(400).json({ message: "Order ID is required" });
   }
-}
+
+  try {
+    await GuestOrder.updateOne({ _id: id }, { $set: { status: 'approve' } });
+    // Find the guest order by ID
+    const guestOrder = await GuestOrder.findById(id);
+    if (!guestOrder) {
+      return res.status(404).json({ message: "Guest order not found" });
+    }
+
+    // Extract the guestOrder.code for use in the regex
+    const guestOrderCode = guestOrder.code;
+    if (!guestOrderCode) {
+      return res.status(400).json({ message: "Guest order code is missing" });
+    }
+
+    // Find a ZaloOrder where order.id includes the guestOrder.code
+    const zaloOrder = await ZaloOrder.findOne({ "order.id": { $regex: guestOrderCode } });
+    if (!zaloOrder) {
+      return res.status(404).json({ message: "No matching Zalo order found" });
+    }
+
+    // Update the order status to "approved"
+    const updateResult = await ZaloOrder.updateOne(
+        { _id: zaloOrder._id },
+        { $set: { "order.status": "confirmed" } }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      return res.status(400).json({ message: "Failed to update Zalo order status" });
+    }
+
+    return res.status(200).json({ message: "Order approved successfully" });
+  } catch (err) {
+    console.error("Error approving guest order and updating Zalo order:", err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 exports.deleteGuestOrders = async (req, res) => {
   const { id } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ message: "Order ID is required" });
+  }
+
   try {
     await GuestOrder.updateOne({ _id: id }, { $set: { status: 'canceled' } });
-    return res.end();
+    // Find the guest order by ID
+    const guestOrder = await GuestOrder.findById(id);
+    if (!guestOrder) {
+      return res.status(404).json({ message: "Guest order not found" });
+    }
+
+    // Extract the guestOrder.code for use in the regex
+    const guestOrderCode = guestOrder.code;
+    if (!guestOrderCode) {
+      return res.status(400).json({ message: "Guest order code is missing" });
+    }
+
+    // Find a ZaloOrder where order.id includes the guestOrder.code
+    const zaloOrder = await ZaloOrder.findOne({ "order.id": { $regex: guestOrderCode } });
+    if (!zaloOrder) {
+      return res.status(404).json({ message: "No matching Zalo order found" });
+    }
+
+    // Update the order status to "approved"
+    const updateResult = await ZaloOrder.updateOne(
+        { _id: zaloOrder._id },
+        { $set: { "order.status": "closed" } }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      return res.status(400).json({ message: "Failed to update Zalo order status" });
+    }
+
+    return res.status(200).json({ message: "Order approved successfully" });
   } catch (err) {
-    console.log(err);
+    console.error("Error approving guest order and updating Zalo order:", err);
+    return res.status(500).json({ message: "Internal server error" });
   }
-}
+};
+
+// exports.deleteGuestOrders = async (req, res) => {
+//   const { id } = req.body;
+//   try {
+//     await GuestOrder.updateOne({ _id: id }, { $set: { status: 'canceled' } });
+//     return res.end();
+//   } catch (err) {
+//     console.log(err);
+//   }
+// }
 
 exports.getGuestOrdersQuantity = async (req, res) => {
   try {
@@ -321,87 +401,87 @@ exports.getStatisticsByStoreToday = async (req, res) => {
           path: "creator",
           populate: "user",
         })
-          .populate({
-            path: "producer",
-            populate: "user",
-          })
-          .populate({
-            path: "shipper",
-            populate: "user",
-          })
-          .populate({
-            path: "confirmShip",
-            populate: "user",
-          })
-          .populate("toStore")
-          .populate({
-            path: "toStoreOrder",
-            populate: [{
-              path: "creator",
-              populate: {
-                path: "user",
-              },
-            }, {
+            .populate({
               path: "producer",
-              populate: {
-                path: "user",
-              },
-            }, {
+              populate: "user",
+            })
+            .populate({
               path: "shipper",
-              populate: {
-                path: "user",
-              },
-            }, {
+              populate: "user",
+            })
+            .populate({
               path: "confirmShip",
-              populate: {
-                path: "user",
-              },
-            }]
-          })
-          .populate({ path: 'transferStore', populate: ['fromStore', 'user'] });
+              populate: "user",
+            })
+            .populate("toStore")
+            .populate({
+              path: "toStoreOrder",
+              populate: [{
+                path: "creator",
+                populate: {
+                  path: "user",
+                },
+              }, {
+                path: "producer",
+                populate: {
+                  path: "user",
+                },
+              }, {
+                path: "shipper",
+                populate: {
+                  path: "user",
+                },
+              }, {
+                path: "confirmShip",
+                populate: {
+                  path: "user",
+                },
+              }]
+            })
+            .populate({ path: 'transferStore', populate: ['fromStore', 'user'] });
 
       } else {
         ordersByStore = await Order2023.find({ store: req.user.store, $or: [{ $and: [{ "shipper.user": user }, { "confirmShip.user": undefined }] }, { $and: [{ "shipper.user": { $ne: user } }, { "confirmShip.user": user }] }], date, month, year: year.slice(-2) }).lean().populate('store').populate({
           path: "creator",
           populate: "user",
         })
-          .populate({
-            path: "producer",
-            populate: "user",
-          })
-          .populate({
-            path: "shipper",
-            populate: "user",
-          })
-          .populate({
-            path: "confirmShip",
-            populate: "user",
-          }).populate("toStore")
-          .populate({
-            path: "toStoreOrder",
-            populate: [{
-              path: "creator",
-              populate: {
-                path: "user",
-              },
-            }, {
+            .populate({
               path: "producer",
-              populate: {
-                path: "user",
-              },
-            }, {
+              populate: "user",
+            })
+            .populate({
               path: "shipper",
-              populate: {
-                path: "user",
-              },
-            }, {
+              populate: "user",
+            })
+            .populate({
               path: "confirmShip",
-              populate: {
-                path: "user",
-              },
-            }]
-          })
-          .populate({ path: 'transferStore', populate: ['fromStore', 'user'] });
+              populate: "user",
+            }).populate("toStore")
+            .populate({
+              path: "toStoreOrder",
+              populate: [{
+                path: "creator",
+                populate: {
+                  path: "user",
+                },
+              }, {
+                path: "producer",
+                populate: {
+                  path: "user",
+                },
+              }, {
+                path: "shipper",
+                populate: {
+                  path: "user",
+                },
+              }, {
+                path: "confirmShip",
+                populate: {
+                  path: "user",
+                },
+              }]
+            })
+            .populate({ path: 'transferStore', populate: ['fromStore', 'user'] });
       }
     } else {
       if (user === "") {
@@ -409,85 +489,85 @@ exports.getStatisticsByStoreToday = async (req, res) => {
           path: "creator",
           populate: "user",
         })
-          .populate({
-            path: "producer",
-            populate: "user",
-          })
-          .populate({
-            path: "shipper",
-            populate: "user",
-          })
-          .populate({
-            path: "confirmShip",
-            populate: "user",
-          }).populate("toStore")
-          .populate({
-            path: "toStoreOrder",
-            populate: [{
-              path: "creator",
-              populate: {
-                path: "user",
-              },
-            }, {
+            .populate({
               path: "producer",
-              populate: {
-                path: "user",
-              },
-            }, {
+              populate: "user",
+            })
+            .populate({
               path: "shipper",
-              populate: {
-                path: "user",
-              },
-            }, {
+              populate: "user",
+            })
+            .populate({
               path: "confirmShip",
-              populate: {
-                path: "user",
-              },
-            }]
-          })
-          .populate({ path: 'transferStore', populate: ['fromStore', 'user'] });
+              populate: "user",
+            }).populate("toStore")
+            .populate({
+              path: "toStoreOrder",
+              populate: [{
+                path: "creator",
+                populate: {
+                  path: "user",
+                },
+              }, {
+                path: "producer",
+                populate: {
+                  path: "user",
+                },
+              }, {
+                path: "shipper",
+                populate: {
+                  path: "user",
+                },
+              }, {
+                path: "confirmShip",
+                populate: {
+                  path: "user",
+                },
+              }]
+            })
+            .populate({ path: 'transferStore', populate: ['fromStore', 'user'] });
       } else {
         ordersByStore = await Order.find({ store: req.user.store, $or: [{ $and: [{ "shipper.user": user }, { "confirmShip.user": undefined }] }, { $and: [{ "shipper.user": { $ne: user } }, { "confirmShip.user": user }] }], date, month, year: year.slice(-2) }).lean().populate('store').populate({
           path: "creator",
           populate: "user",
         })
-          .populate({
-            path: "producer",
-            populate: "user",
-          })
-          .populate({
-            path: "shipper",
-            populate: "user",
-          })
-          .populate({
-            path: "confirmShip",
-            populate: "user",
-          }).populate("toStore")
-          .populate({
-            path: "toStoreOrder",
-            populate: [{
-              path: "creator",
-              populate: {
-                path: "user",
-              },
-            }, {
+            .populate({
               path: "producer",
-              populate: {
-                path: "user",
-              },
-            }, {
+              populate: "user",
+            })
+            .populate({
               path: "shipper",
-              populate: {
-                path: "user",
-              },
-            }, {
+              populate: "user",
+            })
+            .populate({
               path: "confirmShip",
-              populate: {
-                path: "user",
-              },
-            }]
-          })
-          .populate({ path: 'transferStore', populate: ['fromStore', 'user'] });
+              populate: "user",
+            }).populate("toStore")
+            .populate({
+              path: "toStoreOrder",
+              populate: [{
+                path: "creator",
+                populate: {
+                  path: "user",
+                },
+              }, {
+                path: "producer",
+                populate: {
+                  path: "user",
+                },
+              }, {
+                path: "shipper",
+                populate: {
+                  path: "user",
+                },
+              }, {
+                path: "confirmShip",
+                populate: {
+                  path: "user",
+                },
+              }]
+            })
+            .populate({ path: 'transferStore', populate: ['fromStore', 'user'] });
       }
     }
 
